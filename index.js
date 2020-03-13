@@ -1,52 +1,78 @@
+const inquirer = require('inquirer');
 const request = require('request');
 
-const FQDN = process.argv[2];
-const username = process.argv[3];
-const password = process.argv[4];
-
-
-if (!FQDN || !username || !password) {
-    console.log('Please provide FQDN with protocol, Superadmin Username and Password as arguments');
-    process.exit(0);
-}
-
+let FQDN;
 let token;
 
-request.post(`${FQDN}/api/a/rbac/login`, {
-    headers: {
-        'Content-Type': 'application/json'
-    },
-    body: {
-        username: username,
-        password: password
-    },
-    json: true
-}, (err1, res1, body1) => {
-    if (err1) {
-        console.error(err1);
-        process.exit(0);
+async function execute() {
+    const answers = await inquirer.prompt([
+        {
+            message: 'Please select the protocol',
+            choices: ['https', 'http'],
+            name: 'protocol',
+            default: 'https',
+            type: 'list'
+        },
+        {
+            message: 'Please Enter the FQDN',
+            name: 'fqdn',
+            type: 'input'
+        },
+        {
+            message: 'Please Enter the username of User',
+            name: 'username',
+            type: 'input'
+        },
+        {
+            message: 'Please Enter the password of User',
+            name: 'password',
+            type: 'password'
+        },
+        {
+            message: 'Restrict to one App?',
+            name: 'oneApp',
+            type: 'confirm'
+        },
+        {
+            when: function (ans) {
+                return ans.oneApp;
+            },
+            message: 'Enter App Name',
+            name: 'app',
+            type: 'input'
+        },
+        {
+            message: 'Only Active Services?',
+            name: 'active',
+            type: 'confirm'
+        },
+    ]);
+    FQDN = answers.fqdn;
+    const userData = await login(answers.username, answers.password);
+    token = userData.token;
+    const filter = {};
+    if (answers.active) {
+        filter.status = 'Active';
     }
-    token = body1.token;
-    async function execute() {
-        const services = await getData('get', '/api/a/sm/service', {
-            count: -1,
-            select: '_id',
-            filter: JSON.stringify({
-                status: 'Active'
-            })
-        });
-        const arr = [];
-        if(services && services.length > 0){
-            services.forEach(srvc => {
-                arr.push(getData('put',`/api/a/sm/${srvc._id}/repair`));
-            });
-        }
-        const result = await Promise.all(arr);
-        console.log(result);
+    if (answers.oneApp) {
+        filter.app = answers.app;
     }
-    execute().catch(err => {
-        console.error(err);
+    const services = await getData('get', '/api/a/sm/service', {
+        count: -1,
+        select: '_id',
+        filter: JSON.stringify(filter)
     });
+    const arr = [];
+    if (services && services.length > 0) {
+        services.forEach(srvc => {
+            arr.push(getData('put', `/api/a/sm/${srvc._id}/repair`));
+        });
+    }
+    const result = await Promise.all(arr);
+    result.forEach(e => console.log(e));
+}
+execute().catch(err => {
+    console.error(err);
 });
 
 
@@ -60,6 +86,29 @@ function getData(method, path, qs) {
                 'Content-Type': 'application/json'
             },
             qs: qs
+        }, (err, res, body) => {
+            if (err) {
+                reject(err);
+            } else if (res.statusCode === 200 || res.statusCode === 202) {
+                resolve(body);
+            } else {
+                reject(body);
+            }
+        });
+    });
+}
+
+function login(username, password) {
+    return new Promise((resolve, reject) => {
+        request(`${FQDN}/api/a/rbac/login`, {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: {
+                username: username,
+                password: password
+            },
+            json: true
         }, (err, res, body) => {
             if (err) {
                 reject(err);
