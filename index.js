@@ -100,7 +100,7 @@ function getData(method, path, qs) {
 
 function login(username, password) {
     return new Promise((resolve, reject) => {
-        request(`${FQDN}/api/a/rbac/login`, {
+        request.post(`${FQDN}/api/a/rbac/login`, {
             headers: {
                 'Content-Type': 'application/json'
             },
