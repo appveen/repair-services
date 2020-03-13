@@ -47,7 +47,7 @@ async function execute() {
             type: 'confirm'
         },
     ]);
-    FQDN = answers.fqdn;
+    FQDN = answers.protocol + '://' + answers.fqdn;
     const userData = await login(answers.username, answers.password);
     token = userData.token;
     const filter = {};
