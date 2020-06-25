@@ -85,6 +85,8 @@ function getData(method, path, qs) {
                 'Authorization': 'JWT ' + token,
                 'Content-Type': 'application/json'
             },
+            strictSSL: false,
+            rejectUnauthorized: false,
             qs: qs
         }, (err, res, body) => {
             if (err) {
@@ -108,6 +110,8 @@ function login(username, password) {
                 username: username,
                 password: password
             },
+            strictSSL: false,
+            rejectUnauthorized: false,
             json: true
         }, (err, res, body) => {
             if (err) {

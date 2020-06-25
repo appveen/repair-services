@@ -8,6 +8,7 @@
     "request": "^2.88.2"
   },
   "devDependencies": {},
+  "bin": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
